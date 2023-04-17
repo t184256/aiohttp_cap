@@ -3,7 +3,7 @@
 
 import aiohttp
 import asyncio
-import time
+import contextlib
 
 
 # If I were to use aio.http.TCPConnector, it'd be just
@@ -26,35 +26,11 @@ import time
 # But I'm rolling my own high-level-interface limiter for learning purposes.
 # Session acquiring is intentionally folded into Response to make life harder.
 
-class Response:
-    def __init__(self, semaphore, *a, **kwa):
-        self.semaphore = semaphore
-        self.a, self.kwa = a, kwa
-
-    async def __aenter__(self):
-        # acquire a rate-limiting semaphore
-        if self.semaphore is not None:
-            await self.semaphore.acquire()
-        # beginning of async with aiohttp.ClientSession() as self.sess:
-        self.sess = await aiohttp.ClientSession().__aenter__()
-        # beginning of async with self.sess.get(...) as self.response:
-        self.response = self.sess.get(*self.a, **self.kwa)
-        return await self.response.__aenter__()
-
-    async def __aexit__(self, exc_t, exc_v, exc_tb):
-        # end of async with self.sess.get(...)
-        r1 = await self.response.__aexit__(exc_t, exc_v, exc_tb)
-        # end of async with aiohttp.ClientSession()
-        r2 = await self.sess.__aexit__(exc_t, exc_v, exc_tb)
-        # release a rate-limiting semaphore
-        if self.semaphore is not None:
-            self.semaphore.release()
-        return r1 or r2  # not sure this is fully correct
-
 
 class CappedSession:
     def __init__(self, limit=None):
-        self.semaphore = asyncio.Semaphore(limit) if limit else None
+        self.semaphore = (asyncio.Semaphore(limit)
+                          if limit else contextlib.nullcontext())
 
     async def __aenter__(self):
         return self
@@ -63,4 +39,10 @@ class CappedSession:
         pass
 
     def get(self, *a, **kwa):
-        return Response(self.semaphore, *a, **kwa)
+        @contextlib.asynccontextmanager
+        async def response():
+            async with self.semaphore:
+                async with aiohttp.ClientSession() as sess:
+                    async with sess.get(*a, **kwa) as resp:
+                        yield resp
+        return response()
