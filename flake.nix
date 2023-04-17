@@ -8,42 +8,40 @@
     (flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        python = pkgs.python3;
         python3Packages = pkgs.python3Packages;
-        debugPython = python.overrideAttrs(oa: {
-          configureFlags = oa.configureFlags ++ [ "--with-pydebug" ];
-        });
 
         aiohttp_cap = python3Packages.buildPythonPackage {
             pname = "aiohttp_cap";
             version = "0.0.1";
             src = ./.;
-            propagatedBuildInputs = with pkgs.python3Packages; [
+            propagatedBuildInputs = with python3Packages; [
               aiohttp
             ];
-            checkInputs = with pkgs.python3Packages; [
-              pytest pytest-asyncio
+            checkInputs = with python3Packages; [
+              pytestCheckHook pytest pytest-asyncio
               mypy
             ];
           };
       in
       {
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            ((python.withPackages (ps: with ps; [
+        devShells.default = pkgs.mkShell {
+          buildInputs = [
+            (python3Packages.python.withPackages (ps: with ps; [
               aiohttp aiodns brotli
               pytest pytest-asyncio
-            ])).override { python = debugPython ;})
+            ]))
           ];
           nativeBuildInputs = (with python3Packages; [
             mypy
           ]);
           shellHook = ''
-            export PYTHONASYNCIODEBUG=1
+            export PYTHONASYNCIODEBUG=1 PYTHONMALLOC=debug PYTHONFAULTHANDLER=1
+            #export PYTHONWARNINGS=error
+            #export PYTHONTRACEMALLOC=1
           '';
         };
         packages.project-name = aiohttp_cap;
-        defaultPackage = aiohttp_cap;
+        packages.default = aiohttp_cap;
       }
     ));
 }
