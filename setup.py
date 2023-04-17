@@ -3,6 +3,8 @@
 
 from setuptools import setup
 
+TEST_REQUIREMENTS = ['pytest', 'pytest-asyncio']
+
 setup(
     name='aiohttp_cap',
     version='0.0.1',
@@ -10,13 +12,10 @@ setup(
     author='Alexander Sosedkin',
     author_email='monk@unboiled.info',
     description="learning project, do not use",
-    packages=[
-        'aiohttp_cap',
-    ],
+    packages=['aiohttp_cap'],
     install_requires=[
-        'aiohttp'
+        'aiohttp',
     ],
-    tests_require=[
-        'pytest', 'pytest-asyncio'
-    ],
+    extras_require={'test': TEST_REQUIREMENTS},
+    tests_require=TEST_REQUIREMENTS,
 )
