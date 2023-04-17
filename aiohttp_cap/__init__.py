@@ -24,25 +24,25 @@ import contextlib
 
 
 # But I'm rolling my own high-level-interface limiter for learning purposes.
-# Session acquiring is intentionally folded into Response to make life harder.
 
 
 class CappedSession:
     def __init__(self, limit=None):
+        self.session = aiohttp.ClientSession()
         self.semaphore = (asyncio.Semaphore(limit)
                           if limit else contextlib.nullcontext())
 
     async def __aenter__(self):
+        await self.session.__aenter__()
         return self
 
     async def __aexit__(self, exc_t, exc_v, exc_tb):
-        pass
+        await self.session.__aexit__(exc_t, exc_v, exc_tb)
 
     def get(self, *a, **kwa):
         @contextlib.asynccontextmanager
         async def response():
             async with self.semaphore:
-                async with aiohttp.ClientSession() as sess:
-                    async with sess.get(*a, **kwa) as resp:
-                        yield resp
+                async with self.session.get(*a, **kwa) as resp:
+                    yield resp
         return response()
