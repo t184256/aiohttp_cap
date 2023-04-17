@@ -38,6 +38,9 @@
           nativeBuildInputs = (with python3Packages; [
             mypy
           ]);
+          shellHook = ''
+            export PYTHONASYNCIODEBUG=1
+          '';
         };
         packages.project-name = aiohttp_cap;
         defaultPackage = aiohttp_cap;
