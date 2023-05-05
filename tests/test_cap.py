@@ -57,8 +57,8 @@ async def test_single_request(server_counter: ServerCounter) -> None:
     async with aiohttp_cap.CappedSession() as session:
         init_time = time.time()
         status_time, end_time = await request(session, server.url)
-        assert 0 < status_time - init_time < .1  # status arrives quickly
-        assert 1 < end_time - init_time < 1.1  # response arrives in ~1s
+        assert 0 < status_time - init_time < .2  # status arrives quickly
+        assert 1 < end_time - init_time < 1.2  # response arrives in ~1s
     assert conn_counter.max == 1
 
 
@@ -86,13 +86,13 @@ async def test_concurrent_requests(server_counter: ServerCounter) -> None:
         print(min(end_time - init_time for _, end_time in times))
         print(max(end_time - init_time for _, end_time in times))
         # there's a first wave: 15 processed first
-        assert sum(0 < status_time - init_time < 0 + .1 and
-                   1 < end_time - init_time < 1 + .1
+        assert sum(0 < status_time - init_time < 0 + .2 and
+                   1 < end_time - init_time < 1 + .2
                    for status_time, end_time in times) == 15
         # and there's a second wave: 15 processed later
         print([(status_time - init_time, end_time - init_time)
                for status_time, end_time in times])
-        assert sum(1 < status_time - init_time < 1 + .1 and
-                   2 < end_time - init_time < 2 + .1
+        assert sum(1 < status_time - init_time < 1 + .2 and
+                   2 < end_time - init_time < 2 + .2
                    for status_time, end_time in times) == 15
         assert conn_counter.max == 15

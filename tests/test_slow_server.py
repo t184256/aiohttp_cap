@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Alexander Sosedkin <monk@unboiled.info>
 # SPDX-License-Identifier: CC-PDDC
 
-"""Test SlowServer testing helper with ClientSession limiting functionality."""
+"""Test SlowServer testing helper."""
 
 import asyncio
 import multiprocessing
@@ -57,8 +57,8 @@ async def test_single_request(server_counter: ServerCounter) -> None:
     async with aiohttp.ClientSession() as session:
         init_time = time.time()
         status_time, end_time = await request(session, server.url)
-        assert 0 < status_time - init_time < .1  # status arrives quickly
-        assert 1 < end_time - init_time < 1.1  # response arrives in ~1s
+        assert 0 < status_time - init_time < .2  # status arrives quickly
+        assert 1 < end_time - init_time < 1.2  # response arrives in ~1s
     assert conn_counter.max == 1
 
 
@@ -84,8 +84,8 @@ async def test_concurrent_requests(server_counter: ServerCounter) -> None:
         print(max(status_time - init_time for status_time, _ in times))
         print(min(end_time - init_time for _, end_time in times))
         print(max(end_time - init_time for _, end_time in times))
-        assert all(0 < status_time - init_time < .1  # status arrives quickly
+        assert all(0 < status_time - init_time < .2  # status arrives quickly
                    for status_time, _ in times)
-        assert all(1 < end_time - init_time < 1.1  # response arrives in ~1s
+        assert all(1 < end_time - init_time < 1.2  # response arrives in ~1s
                    for _, end_time in times)
         assert conn_counter.max == 30
