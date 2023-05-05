@@ -29,14 +29,22 @@ But I'm rolling my own high-level-interface limiter for learning purposes.
 
 import asyncio
 import contextlib
+import types
+import typing
 
 import aiohttp
+
+
+T = typing.TypeVar('T')
+AsyncYields = typing.AsyncGenerator[T, None]
+
+P = typing.ParamSpec('P')
 
 
 class CappedSession:
     """Analogous to aiohttp.ClientSession, but with a connection limit."""
 
-    def __init__(self, limit=None):
+    def __init__(self, limit: typing.Optional[int] = None) -> None:
         """
         Like aiohttp.ClientSession, but with a connection limit.
 
@@ -46,20 +54,28 @@ class CappedSession:
         self.semaphore = (asyncio.Semaphore(limit)
                           if limit else contextlib.nullcontext())
 
-    async def __aenter__(self):
-
+    async def __aenter__(self) -> typing.Self:
         await self.session.__aenter__()
         return self
 
-    async def __aexit__(self, exc_t, exc_v, exc_tb):
-        await self.session.__aexit__(exc_t, exc_v, exc_tb)
+    async def __aexit__(self,
+                        exc_type: typing.Optional[typing.Type[BaseException]],
+                        exc: typing.Optional[BaseException],
+                        traceback: typing.Optional[types.TracebackType],
+                        ) -> None:
+        await self.session.__aexit__(exc_type, exc, traceback)
+        # returns nothing, so we also return nothing
 
-    def get(self, *a, **kwa):
+    # kwa: Any is also how the actual .get() wraps .request() inside aiohttp
+    def get(self, url: aiohttp.typedefs.StrOrURL, **kwa: typing.Any
+            ) -> typing.AsyncContextManager[aiohttp.ClientResponse]:
         """Proxies aiohttp.ClientSession.get."""
         @contextlib.asynccontextmanager
-        async def response():
-            async with self.semaphore:
-                async with self.session.get(*a, **kwa) as resp:
+        async def response() -> AsyncYields[aiohttp.ClientResponse]:
+            # must be a typeshed bug,
+            # one sure can async with on asyncio.Semaphore
+            async with self.semaphore:  # type: ignore[attr-defined]
+                async with self.session.get(url, **kwa) as resp:
                     yield resp
         return response()
 

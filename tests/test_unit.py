@@ -4,6 +4,7 @@
 """Unit-test CappedSession."""
 
 import asyncio
+import typing
 import unittest.mock
 
 import pytest
@@ -12,11 +13,14 @@ import aiohttp_cap
 
 
 @pytest.mark.asyncio
-async def test_mocked():
+async def test_mocked() -> None:
     """Test CappedSession against a mocked ClientSession.get."""
     with unittest.mock.patch('aiohttp.ClientSession.get') as mock:
         async with aiohttp_cap.CappedSession(limit=3) as session:
-            async def fake_request(session, index, duration):
+            async def fake_request(session: aiohttp_cap.CappedSession,
+                                   index: int,
+                                   duration: float) -> None:
+                mock: typing.Any  # no, it's not an aiohttp.ClientSession
                 async with session.get(f'http://nonex/{index}') as mock:
                     await asyncio.sleep(duration)
                     await mock.end(index)

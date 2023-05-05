@@ -8,7 +8,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        python3Packages = pkgs.python3Packages;
+        python3Packages = pkgs.python311Packages;  # force 3.11 minimum
 
         pylama = python3Packages.pylama.overridePythonAttrs (_: {
           # https://github.com/klen/pylama/issues/232
@@ -26,8 +26,9 @@
         tools = pkgs: pyPackages: (with pyPackages; [
           pytest pytestCheckHook
           coverage pytest-cov
+          mypy pytest-mypy
           pylint pydocstyle
-          pylama pyflakes pycodestyle mypy mccabe
+          pylama pyflakes pycodestyle mccabe
           eradicate
           pytest-asyncio
         ]);

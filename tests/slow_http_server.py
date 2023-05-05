@@ -5,12 +5,14 @@
 
 """Testing helper: a slow HTTP server."""
 
+import http
 import http.server
 import socket
 import time
+import typing
 
 
-def find_port(address='127.0.0.1'):
+def find_port(address: str = '127.0.0.1') -> int:
     """
     Find a free port to listen on.
 
@@ -19,16 +21,23 @@ def find_port(address='127.0.0.1'):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((address, 0))
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    _, port = sock.getsockname()
+    port: int = sock.getsockname()[1]
     sock.close()
     return port
+
+
+Callback = typing.Callable[[], None]
 
 
 class SlowServer(http.server.ThreadingHTTPServer):
     """Deliberately slow http server used for testing purposes."""
 
-    def __init__(self, address='127.0.0.1', port=8000,
-                 callback_start=None, callback_stop=None):
+    def __init__(self,
+                 address: str = '127.0.0.1',
+                 port: int = 8000,
+                 callback_start: typing.Optional[Callback] = None,
+                 callback_stop: typing.Optional[Callback] = None,
+                 ) -> None:
         """
         Initialize a SlowServer.
 
@@ -42,13 +51,13 @@ class SlowServer(http.server.ThreadingHTTPServer):
 
             protocol_version = "HTTP/1.1"
 
-            def do_HEAD(self):  # pylint: disable=invalid-name
+            def do_HEAD(self) -> None:  # pylint: disable=invalid-name
                 """Fairly normal HEAD HTTP method implementation."""
-                self.send_response(http.server.HTTPStatus.OK)
-                self.send_header('Content-Length', 2 * 10)
+                self.send_response(http.HTTPStatus.OK)
+                self.send_header('Content-Length', str(2 * 10))
                 self.end_headers()
 
-            def do_GET(self):  # pylint: disable=invalid-name
+            def do_GET(self) -> None:  # pylint: disable=invalid-name
                 """Slow GET HTTP method implementation, offers callbacks."""
                 self.do_HEAD()
                 if callback_start:

@@ -8,36 +8,48 @@ import threading
 
 
 class ConnectionsCounter:
-    """
-    Connection counter that works across processes/threads.
+    """Connection counter that works across processes/threads."""
 
-    Interface:
-        .current.value
-        .max.value
-        increment()
-        decrement()
-        reset()
-    """
-
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a counter."""
-        self.current = multiprocessing.Value('I', 0)
-        self.max = multiprocessing.Value('I', 0)
+        self._current = multiprocessing.Value('I', 0)
+        self._max = multiprocessing.Value('I', 0)
         self._lock = threading.Lock()
 
-    def increment(self):
-        """Increment a counter."""
+    def increment(self) -> None:
+        """Increment a counter, together with max value as well if needed."""
         with self._lock:
-            self.current.value += 1
-            if self.current.value > self.max.value:
-                self.max.value = self.current.value
+            # https://github.com/python/typeshed/issues/8799
+            self._current.value += 1  # type: ignore[attr-defined]
+            if (self._current.value >  # type: ignore[attr-defined]
+                    self._max.value):  # type: ignore[attr-defined]
+                self._max.value = (  # type: ignore[attr-defined]
+                    self._current.value  # type: ignore[attr-defined]
+                )
 
-    def decrement(self):
+    def decrement(self) -> None:
         """Decrement a counter."""
         with self._lock:
-            self.current.value -= 1
+            self._current.value -= 1  # type: ignore[attr-defined]
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset a counter, together with max value."""
         with self._lock:
-            self.current.value = self.max.value = 0
+            self._current.value = 0  # type: ignore[attr-defined]
+            self._max.value = 0  # type: ignore[attr-defined]
+
+    @property
+    def current(self) -> int:
+        """Return the current counter value."""
+        with self._lock:
+            val: int
+            val = self._current.value  # type: ignore[attr-defined]
+            return val
+
+    @property
+    def max(self) -> int:
+        """Return the max observed counter value since reset."""
+        with self._lock:
+            val: int
+            val = self._max.value  # type: ignore[attr-defined]
+            return val
