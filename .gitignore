@@ -1,4 +1,7 @@
 .direnv
 result
+.coverage
 *.pyc
 **/__pycache__
+.mypy_cache/
+*.egg-info/

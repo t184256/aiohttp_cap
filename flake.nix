@@ -5,43 +5,53 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
   outputs = { self, nixpkgs, flake-utils }:
-    (flake-utils.lib.eachDefaultSystem (system:
+    flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         python3Packages = pkgs.python3Packages;
 
+        pylama = python3Packages.pylama.overridePythonAttrs (_: {
+          # https://github.com/klen/pylama/issues/232
+          patches = [
+            (pkgs.fetchpatch {
+              url = "https://github.com/klen/pylama/pull/233.patch";
+              hash = "sha256-jaVG/vuhkPiHEL+28Pf1VuClBVlFtlzDohT0mZasL04=";
+            })
+          ];
+        });
+
+        deps = pyPackages: with pyPackages; [
+          aiohttp aiodns brotli
+        ];
+        tools = pkgs: pyPackages: (with pyPackages; [
+          pytest pytestCheckHook
+          coverage pytest-cov
+          pylint pydocstyle
+          pylama pyflakes pycodestyle mypy mccabe
+          eradicate
+          pytest-asyncio
+        ]);
+
         aiohttp_cap = python3Packages.buildPythonPackage {
-            pname = "aiohttp_cap";
-            version = "0.0.1";
-            src = ./.;
-            propagatedBuildInputs = with python3Packages; [
-              aiohttp
-            ];
-            checkInputs = with python3Packages; [
-              pytestCheckHook pytest pytest-asyncio
-              mypy
-            ];
-          };
+          pname = "aiohttp_cap";
+          version = "0.0.1";
+          src = ./.;
+          format = "pyproject";
+          propagatedBuildInputs = deps python3Packages;
+          nativeBuildInputs = [ python3Packages.setuptools ];
+          checkInputs = tools pkgs python3Packages;
+        };
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = [
-            (python3Packages.python.withPackages (ps: with ps; [
-              aiohttp aiodns brotli
-              pytest pytest-asyncio
-            ]))
-          ];
-          nativeBuildInputs = (with python3Packages; [
-            mypy
-          ]);
+          buildInputs = [(python3Packages.python.withPackages deps)];
+          nativeBuildInputs = tools pkgs python3Packages;
           shellHook = ''
             export PYTHONASYNCIODEBUG=1 PYTHONMALLOC=debug PYTHONFAULTHANDLER=1
-            #export PYTHONWARNINGS=error
-            #export PYTHONTRACEMALLOC=1
           '';
         };
-        packages.project-name = aiohttp_cap;
+        packages.aiohttp_cap = aiohttp_cap;
         packages.default = aiohttp_cap;
       }
-    ));
+    );
 }

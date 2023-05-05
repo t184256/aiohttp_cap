@@ -1,34 +1,38 @@
 # SPDX-FileCopyrightText: 2023 Alexander Sosedkin <monk@unboiled.info>
 # SPDX-License-Identifier: CC-PDDC
 
+"""Test aiohttp_cap."""
+
 import asyncio
 import multiprocessing
 import time
 
 import pytest
 
-import aiohttp_cap
-
 import connections_counter
 import slow_http_server
 
+import aiohttp_cap
 
-@pytest.fixture(scope='module')
-def server_fixture():
+
+@pytest.fixture(name='server_fixture', scope='module')
+def fixture_server_fixture():
+    """Spin up a SlowServer to test against: fixture."""
     port = slow_http_server.find_port('127.0.0.1')
     c_counter = connections_counter.ConnectionsCounter()
     slow_server = slow_http_server.SlowServer('127.0.0.1', port,
                                               c_counter.increment,
                                               c_counter.decrement)
     slow_server.connections_counter = c_counter
-    p = multiprocessing.Process(target=slow_server.serve_forever)
-    p.start()
+    process = multiprocessing.Process(target=slow_server.serve_forever)
+    process.start()
     yield slow_server
-    p.terminate()
-    p.join()
+    process.terminate()
+    process.join()
 
 
 async def request(session, url):
+    """Issue a single request to a given URL."""
     async with session.get(url) as resp:
         assert resp.status == 200
         status_time = time.time()
@@ -39,6 +43,7 @@ async def request(session, url):
 
 @pytest.mark.asyncio
 async def test_single_request(server_fixture):
+    """Issue a single request to SlowServer, time it."""
     server_fixture.connections_counter.reset()
     assert server_fixture.connections_counter.max.value == 0
     async with aiohttp_cap.CappedSession() as session:
@@ -51,6 +56,7 @@ async def test_single_request(server_fixture):
 
 @pytest.mark.asyncio
 async def test_concurrent_requests(server_fixture):
+    """Issue many requests to SlowServer, time them, check max connections."""
     async with aiohttp_cap.CappedSession(limit=15) as session:
         # warm up
         server_fixture.connections_counter.reset()

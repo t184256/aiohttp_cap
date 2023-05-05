@@ -1,0 +1,36 @@
+[project]
+name = "aiohttp_cap"
+version = "0.0.1"
+authors = [
+  { name="Alexander Sosedkin", email="monk@unboiled.info" },
+]
+description = "learning project, do not use"
+urls.homepage = "https://github.com/t184256/aiohttp_cap"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.10"
+dependencies = ["aiohttp"]
+optional-dependencies.test = [
+    "pytest", "pytest-asyncio", "coverage", "pytest-cov",
+    "pylama", "pyflakes", "pycodestyle", "pydocstyle", "mypy", "mccabe",
+    "pylint", "eradicate",
+]
+
+[tool.pytest.ini_options]
+addopts = "--pylama --cov --cov-report term-missing --doctest-modules"
+
+[tool.pylama]
+#linters = "pylint,pyflakes,pycodestyle,pydocstyle,mypy,mccabe,eradicate"
+linters = "pylint,pyflakes,pycodestyle,pydocstyle,mccabe,eradicate"
+
+[tool.pylama.linter.pydocstyle]
+ignore = "D212,D203,D105"
+
+[tool.coverage]
+run.source = ["aiohttp_cap"]
+run.branch = true
+report.exclude_lines = [ "if __name__ == .__main__.:" ]
+report.fail_under = 100
